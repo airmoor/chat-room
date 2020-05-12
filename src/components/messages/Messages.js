@@ -23,11 +23,11 @@ export default class Messages extends Component {
         const { messages, user, typingUsers } = this.props
         
         return (
-            <div ref='container'
+            <div 
+                ref='container'
                 className="chat-messages">
                     {
                         messages.map((mes)=>{
-                            
                             const position = (mes.sender === user.name) ? 'right' : 'left';
                       
                             return (

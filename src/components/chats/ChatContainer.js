@@ -1,44 +1,52 @@
 import React, { Component } from 'react';
-import { COMMUNITY_CHAT, MESSAGE_SENT, MESSAGE_RECIEVED, TYPING } from '../../Events'
+import { COMMUNITY_CHAT, PRIVATE_MESSAGE, MESSAGE_SENT, MESSAGE_RECIEVED, TYPING, ADD_CHAT } from '../../Events'
 import Sidebar from './Sidebar';
 import ChatHeader from './ChatHeader';
 import Messages from '../messages/Messages';
 import MessageInput from '../messages/MessageInput';
+import './../../style/chat.css'
 
 
 class ChatContainer extends Component {
 
     constructor(props) {
         super(props);	
-      
         this.state = {
             chats:[],
             activeChat:null
         };
       }
 
+
     componentDidMount() {
         const { socket } = this.props
-        socket.emit(COMMUNITY_CHAT, this.resetChat)
+        // socket.emit(ADD_CHAT,  this.addChat(chat))
+        socket.emit(COMMUNITY_CHAT,  this.resetChat)
+        // this.initSocket(socket)
     }  
-    
+
+    initSocket(socket) {
+        socket.emit(COMMUNITY_CHAT,  this.resetChat)
+        socket.on(PRIVATE_MESSAGE, this.addChat)
+    }
+
+   
     // Reset the chat back to only the chat passed in.
     resetChat = (chat) => {
         return this.addChat(chat, true)
     }
     
     // Adds chat to the chat container, 
-    // if reset is true removes all chats
-    // and sets that chat to the main chat.
     // Sets the message and typing socket events for the chat.
-    addChat = (chat, reset) => {
-        console.log(chat)
+    addChat = (chat, reset = false) => {
+        console.log('chat',chat)
         const { socket } = this.props
         const { chats } = this.state
 
         const newChats = reset ? [chat] : [...chats, chat]
         // invite in first chat automaticly
         // this.setState({chats:newChats, activeChat:reset ? chat : this.state.activeChat})
+
         this.setState({chats:newChats})
 
         const messageEvent = `${MESSAGE_RECIEVED}-${chat.id}`
@@ -49,9 +57,9 @@ class ChatContainer extends Component {
     }
     
     
-     // Returns a function that will 
+    // Returns a function that will 
     // adds message to chat with the chatId passed in. 
-    addMessageToChat = (chatId)=>{
+    addMessageToChat = (chatId) => {
         return message => {
             const { chats } = this.state
             let newChats = chats.map((chat)=>{
@@ -87,6 +95,7 @@ class ChatContainer extends Component {
 
     setActiveChat = (activeChat) => {
         this.setState({activeChat})
+        
     }
 
     sendMessage = (chatId, message) => {
@@ -99,9 +108,13 @@ class ChatContainer extends Component {
         socket.emit(TYPING, {chatId, isTyping})
     }
 
+    setChats = (chats) => {
+        this.setState({chats});
+    }
+
     render() {
-        const { user, logout } = this.props
-        const { chats, activeChat } = this.state
+        const { user, logout, socket } = this.props
+        const { chats, activeChat, addChat, setChat } = this.state
         return (
      
             <div className='chat-container'>
@@ -118,9 +131,14 @@ class ChatContainer extends Component {
                 <div className='chat-main'>
                     <Sidebar 
                         chats={chats}
+                        setChats={this.setChats}
                         activeChat={activeChat}
                         setActiveChat={this.setActiveChat}
                         username={user}
+                        addChat={addChat}
+                        socket={socket}
+                        setChat={setChat}
+                        sendPrivateMessage={this.sendPrivateMessage}
                     />
                     {
                         activeChat !== null ? (
@@ -149,12 +167,8 @@ class ChatContainer extends Component {
                                 You have not chats now. Add some at the side :)
                             </div>
                     }
-                
                 </div>
-                
-  
             </div>
-
         );
     }
 }

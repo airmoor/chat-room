@@ -64,7 +64,6 @@ export default class MessageInput extends Component {
 
 					<input 
 						id = "message"
-						ref = {"messageinput"}
 						type = "text"
 						className = "message-input"
 						value = { message }
