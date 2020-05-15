@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { COMMUNITY_CHAT, PRIVATE_MESSAGE, MESSAGE_SENT, MESSAGE_RECIEVED, TYPING, ADD_CHAT } from '../../Events'
+import { MAIN_CHAT, MESSAGE_SENT, MESSAGE_RECIEVED, TYPING, USER_TO_CHAT, USER_IN_CHAT } from '../../Events'
 import Sidebar from './Sidebar';
 import ChatHeader from './ChatHeader';
 import Messages from '../messages/Messages';
@@ -20,35 +20,25 @@ class ChatContainer extends Component {
 
     componentDidMount() {
         const { socket } = this.props
-        // socket.emit(ADD_CHAT,  this.addChat(chat))
-        socket.emit(COMMUNITY_CHAT,  this.resetChat)
-        // this.initSocket(socket)
+        socket.emit(MAIN_CHAT, this.addChat)
     }  
 
-    initSocket(socket) {
-        socket.emit(COMMUNITY_CHAT,  this.resetChat)
-        socket.on(PRIVATE_MESSAGE, this.addChat)
-    }
-
-   
-    // Reset the chat back to only the chat passed in.
-    resetChat = (chat) => {
-        return this.addChat(chat, true)
-    }
-    
+ 
     // Adds chat to the chat container, 
     // Sets the message and typing socket events for the chat.
-    addChat = (chat, reset = false) => {
-        console.log('chat',chat)
-        const { socket } = this.props
+    addChat = (chat) => {
         const { chats } = this.state
-
-        const newChats = reset ? [chat] : [...chats, chat]
-        // invite in first chat automaticly
+        const newChats = [...chats, chat]
+        console.log('added chat',chat)
+        console.log('chats now',newChats)
+        // to invite in first chat automaticly 
         // this.setState({chats:newChats, activeChat:reset ? chat : this.state.activeChat})
-
         this.setState({chats:newChats})
+        this.setActions(chat);
+    }
 
+    setActions = (chat) => {
+        const { socket } = this.props
         const messageEvent = `${MESSAGE_RECIEVED}-${chat.id}`
         const typingEvent = `${TYPING}-${chat.id}`
 
@@ -56,26 +46,27 @@ class ChatContainer extends Component {
         socket.on(messageEvent, this.addMessageToChat(chat.id))
     }
     
-    
     // Returns a function that will 
     // adds message to chat with the chatId passed in. 
     addMessageToChat = (chatId) => {
+        console.log('addMessageToChat', chatId)
         return message => {
             const { chats } = this.state
-            let newChats = chats.map((chat)=>{
-                if(chat.id === chatId)
+            let newChats = chats.map((chat) => {
+                if (chat.id === chatId)
                     chat.messages.push(message)
                 return chat
             })
+            console.log('addMessageToChat', newChats)
+
             this.setState({chats:newChats})
         }
     }
-
     
     // Updates the typing of chat with id passed in.
     updateTypingInChat = (chatId) => {
         return ({isTyping, user}) => {
-            if(user !== this.props.user.name) {
+            if (user !== this.props.user.name) {
                 const { chats } = this.state
                 let newChats = chats.map((chat) => {
                     if (chat.id === chatId) {
@@ -93,14 +84,64 @@ class ChatContainer extends Component {
         }
     }
 
-    setActiveChat = (activeChat) => {
+    setActiveChat = (activeChat, username) => {
+        const { socket } = this.props
+        let chats = this.state.chats;
+        const addUsertoChatEvent = `${USER_TO_CHAT}-${activeChat.id}`
         this.setState({activeChat})
-        
+
+        let chat = chats.find(chat => chat.id === activeChat.id)
+
+
+
+       console.log(chat.users, chat.users.includes(username), username)
+        if (chat.users.includes(username)) {
+            console.log('user is already in chat ') 
+        }
+        else {
+            socket.on(addUsertoChatEvent, this.addUserToChat(chat.id))
+        }
     }
+
+    addUserToChat = (chatId) => {
+        return user => {
+            const { chats } = this.state
+            let newChats = chats.map((chat) => {
+                if (chat.id === chatId)
+                    if(!chat.users.includes(user)) {
+                        chat.users.push(user)
+                    }
+                return chat
+            })
+            this.setState({chats:newChats})
+            console.log('newChats', newChats)
+        }
+    }
+
+    
+    setUserToChat = (chatId, user) => {
+        const { socket } = this.props
+        let chats = this.state.chats;
+
+        let newChats = chats.map((chat) => {
+            if (chat.id === chatId) {
+                let status=chat.users.find(u => u.id === user.id)
+                if(!status) {
+                    socket.emit(USER_IN_CHAT, chat.id, user )
+                }
+                else console.log('user is already in chat ') 
+            }
+            return chat
+        })
+        this.setState({chats:newChats})
+    }
+
+
 
     sendMessage = (chatId, message) => {
         const { socket } = this.props
-        socket.emit(MESSAGE_SENT, {chatId, message} )
+        socket.emit(MESSAGE_SENT, chatId, message )
+        console.log(chatId, message)
     }
 
     sendTyping = (chatId, isTyping) => {
@@ -108,37 +149,34 @@ class ChatContainer extends Component {
         socket.emit(TYPING, {chatId, isTyping})
     }
 
-    setChats = (chats) => {
-        this.setState({chats});
-    }
 
     render() {
         const { user, logout, socket } = this.props
-        const { chats, activeChat, addChat, setChat } = this.state
+        const { chats, activeChat } = this.state
         return (
      
             <div className='chat-container'>
-           
                 <div className='chat-header h2'>
                     Welcome to chat, {user.name}!
                  
-                    <div onClick={()=>{logout()}} title="Logout">
+                    <div onClick={() => {logout()}} title="Logout">
                         <i className='sign out icon'></i>
                     </div>
-                    
                 </div>
             
                 <div className='chat-main'>
                     <Sidebar 
                         chats={chats}
-                        setChats={this.setChats}
                         activeChat={activeChat}
                         setActiveChat={this.setActiveChat}
                         username={user}
-                        addChat={addChat}
+                        addChat={this.addChat}
                         socket={socket}
-                        setChat={setChat}
-                        sendPrivateMessage={this.sendPrivateMessage}
+                        setUserToChat = {
+                            (chatId, user) => {
+                                this.setUserToChat(chatId, user)
+                            }
+                        }
                     />
                     {
                         activeChat !== null ? (

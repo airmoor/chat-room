@@ -1,7 +1,6 @@
 // module for creating objects
 
 //universally unique identifier
-// const uuid = require('uuid')
 const { v4: uuid } = require ('uuid');
 
 
@@ -19,7 +18,7 @@ const createMessage = ({message = "", sender = ""} = {}) => (
         id:uuid(),
         time:getTime(new Date(Date.now())),
         message,
-        sender	
+        sender
     }
 )
 

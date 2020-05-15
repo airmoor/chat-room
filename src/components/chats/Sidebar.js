@@ -14,27 +14,31 @@ class Sidebar extends Component {
     }
 
     handleSubmit = (e) => {
-        const { socket } = this.props
+        const { socket, chats, addChat } = this.props
         const { newChatName } = this.state
+
+        let searched_chat = chats.find(chat => chat.id === newChatName) 
+        console.log(searched_chat)
+        // todo: if searched_chat!==undefined create new chat
+        // else add current by this id (or change to unique name)
+
         e.preventDefault()
         this.setState({newChatName:""})
-        socket.emit(ADD_CHAT, newChatName, this.setChat)
+        socket.emit(ADD_CHAT, newChatName, addChat)
         console.log(newChatName)
     }
 
-    setChat = ( chat ) => {
-        const { chats, setChats } = this.props
-        chats.push(chat)
-        setChats(chats)
-        console.log(chats)
+
+    setActiveChat = (chat) => {
+        const { username } = this.props
+        this.props.setActiveChat(chat, username) 
+        this.props.setUserToChat(chat.id, username)
     }
 
 
     render() {
-        const { chats, activeChat, setActiveChat, username} = this.props
+        const { chats, activeChat, username} = this.props
         const { newChatName, isHidden } = this.state
-        console.log('chats',chats);
-        console.log(username); 
         return (
             <div className="chat-sidebar">
                    
@@ -61,17 +65,8 @@ class Sidebar extends Component {
                         <i className = 'plus icon'></i> 
                     </button>
 				</form>
-                {!isHidden && 
-                    <div className='chat'>
-                        Active users in chat:
-                        <div className='user'>
-                            user
-                        </div>
-                    </div>
-                }
-                <div 
-                    ref='users' 
-                    onClick={(e)=>{ (e.target === this.refs.user) && setActiveChat(null, username) }}> {
+                
+                <div > {
                         chats.map((chat) => {
                             if (chat.name){
                                 const lastMessage = chat.messages[chat.messages.length - 1];
@@ -83,13 +78,25 @@ class Sidebar extends Component {
                                         <div 
                                             key={chat.id} 
                                             className={`chat ${classNames}`}
-                                            onClick={ ()=>{ setActiveChat(chat, username) } }
+                                            onClick={ ()=>{ this.setActiveChat(chat) } }
                                         >
                                             <div className="chat-info">
                                                 <strong >{chat.name}</strong>
                                                     {lastMessage && 
                                                         <p>{lastMessage.sender === username.name ? 'you':
                                                         lastMessage.sender} : {lastMessage.message}</p>
+                                                    }
+                                                    {!isHidden && 
+                                                    <div>
+                                                        <p>users in chat:</p>
+                                                        <p>{chat.users.map((user)=> {
+                                                            return (
+                                                                <p>
+                                                                    {user.name}
+                                                                </p>
+                                                            )
+                                                        })}</p>
+                                                    </div>
                                                     }
                                             </div>
                                             <div>

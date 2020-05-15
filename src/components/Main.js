@@ -20,11 +20,17 @@ class Main extends Component {
         this.initSocket()
     }
 
+    componentWillUnmount() {
+        const { socket } = this.state
+        socket.off(USER_CONNECTED)
+        socket.off(LOGOUT)
+    }
+
     // Connect to and initializes the socket
     initSocket = () => {
         const socket = io(socketUrl)
         socket.on('connect', () => {
-            console.log("Connected");
+            console.log("Connected", socket);
         })
         this.setState({ socket })
     }
