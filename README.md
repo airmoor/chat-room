@@ -1,4 +1,7 @@
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## About
+A simple chat app developed using React.js and Socket.io
+
+![screenshotes](https://github.com/airmoor/chat-room/blob/master/screenshots/chat.PNG)
 
 ## Available Scripts
 
